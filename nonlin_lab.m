@@ -41,8 +41,10 @@ poles = [-1 -1.1 -1.2 -1.3];
 % Compute the feedback gain matrix
 K = place(A, B, poles);
 
+x_init = [0.1; 0.2; 0.3; 0.4];  % New initial values
+x = x_init;  % Use these initial values for x
 
-x = [x1 x2 x3 x4]'; 
+x_ref = [pi/4; 0 ; 0; 0];
 
 % Display the linearized system matrices
 disp('Linearized system matrix A:');
