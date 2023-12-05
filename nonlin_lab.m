@@ -1,5 +1,15 @@
-%% Nonlinear Control Lab
+%% Nonlinear Control Lab %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+clc 
+clear
+
+%% Init
+
 syms theta_l theta_l_dot theta_m theta_m_dot nu m l g J_l J_m B_l B_m k real
+
+param_values = [m, l, g, J_l, J_m, B_l, B_m, k];
+param_numeric = [0.3, 0.3, 9.8, 4e-4, 4e-4, 0.0, 0.015, 0.8]; % Example values
 
 % Define the state variables
 x1 = theta_l;       % theta_l
@@ -18,36 +28,88 @@ f = [f1; f2; f3; f4];
 
 % Define the point of linearization
 theta_l_eq = pi/4;
-x_eq = [theta_l_eq; 0; theta_l_eq; 0];  % Equilibrium point
-u_eq = 0;  % Assuming no input at the equilibrium
-
-% Substitute parameters (use your own values)
-param_values = [m, l, g, J_l, J_m, B_l, B_m, k];
-param_numeric = [0.3, 0.3, 9.8, 4e-4, 4e-4, 0.0, 0.015, 0.8]; % Example values
+x_eq = [theta_l_eq; 0; 0; 0];  % Equilibrium point
+u_eq = m*g*l*cos(theta_l_eq/4);
 
 % Correctly combine all variables and values for substitution
 all_variables = [x1, x2, x3, x4, nu, param_values];
 all_values = [x_eq', u_eq, param_numeric]; % Ensure all_values is a row vector
 
 % Linearize the system
-A = double(subs(jacobian(f, [x1, x2, x3, x4]), all_variables, all_values));
-B = double(subs(jacobian(f, nu), all_variables, all_values));
+A_lin = double(subs(jacobian(f, [x1, x2, x3, x4]), all_variables, all_values));
+B_lin = double(subs(jacobian(f, nu), all_variables, all_values));
 
-%K = eye(4);
-
-% Example desired pole locations (adjust these based on your system)
-poles = [-1 -1.1 -1.2 -1.3];
-
-% Compute the feedback gain matrix
-K = place(A, B, poles);
-
-x_init = [0.1; 0.2; 0.3; 0.4];  % New initial values
-x = x_init;  % Use these initial values for x
+x_init = [0 0 0 0]';  % New initial values
 
 x_ref = [pi/4; 0 ; 0; 0];
 
-% Display the linearized system matrices
+%%% Regulators %%%
+%%%%%%%%%%%%%%%%%%
+
+%% Full state feedback controller
+
+% Example desired pole locations (adjust these based on your system)
+poles = [-2 -2.5 -3 -3.5];
+
+% Compute the feedback gain matrix
+K = place(A_lin, B_lin, poles);
+
+%% LQR
+Q = diag([1000, 0.1, 0.1, 0.1]);  % Define the state-error weighting
+R = 2;  % Define the control-effort weighting
+
+% Compute the LQR gain
+[K, S, e] = lqr(A_lin, B_lin, Q, R);
+% K is the optimal gain matrix
+
+%% LQR w/ augmented integral state
+% Original state-space model
+A = A_lin;  % Your original A matrix
+B = B_lin;  % Your original B matrix
+C = [1 1 1 1];  % Assumes everything is measured
+D = 0;  % Assume no direct feedthrough for simplicity
+
+% Augment the state-space model to include the integral of the error
+A_aug = [A, zeros(4, 1); -C, 0];
+B_aug = [B; 0];
+
+% Choose new Q and R matrices for the augmented system
+Q_aug = diag([500, 0.1, 0.1, 0.1, 10]);  % The last element is for the integrator state
+R_aug = 5;  % Control-effort weighting
+
+% Compute the LQR gain for the augmented system
+[K_aug, S_aug, e_aug] = lqr(A_aug, B_aug, Q_aug, R_aug);
+
+% Extract the feedback gain and the integrator gain from the augmented gain matrix
+K = K_aug(1:4);  % Feedback gain for the original states
+K_i = 10*abs(K_aug(5));  % Integrator gain
+
+%% Feedforward Gain (NOTE: useless for this system)
+% Compute the pseudo-inverse for feedforward gain
+K_ff = pinv(B_lin);
+
+% Compute the feedforward control action
+u_ff = K_ff * x_ref;
+
+%% Display the linearized system matrices
 disp('Linearized system matrix A:');
-disp(A);
+disp(A_lin);
 disp('Linearized system matrix B:');
-disp(B);
+disp(B_lin);
+
+%% Notater
+
+% u should be 1x1?
+% 2 motorer, 1 til hvert ledd => u burde være 2x1? 
+
+% se på tuning 
+
+% use nonlin sys in simulation and give input to the nonlin system.
+
+% bruk lin model til å lage K.: u = - Kx. Bruker per nå LQR.
+
+% ANTAKELSE: alt kan måles, nevn i prestasjon
+% IFT. input; 2 motorer. Se på verdier som er reasonable. Kan argumentere
+% med LQR og vekting! 
+
+%Feedforward funker ikke pga B, men lar den være i koden fremdeles.
