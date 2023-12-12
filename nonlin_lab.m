@@ -28,8 +28,10 @@ f = [f1; f2; f3; f4];
 
 % Define the point of linearization
 theta_l_eq = pi/4;
-x_eq = [theta_l_eq; 0; 0; 0];  % Equilibrium point
-u_eq = m*g*l*cos(theta_l_eq/4);
+theta_m_eq = pi/2;
+x_eq = [theta_l_eq; 0; 0; 0]; 
+%u_eq = m*g*l*cos(theta_l_eq);
+u_eq = - k * (theta_l_eq - theta_m_eq);
 
 % Correctly combine all variables and values for substitution
 all_variables = [x1, x2, x3, x4, nu, param_values];
@@ -39,9 +41,9 @@ all_values = [x_eq', u_eq, param_numeric]; % Ensure all_values is a row vector
 A_lin = double(subs(jacobian(f, [x1, x2, x3, x4]), all_variables, all_values));
 B_lin = double(subs(jacobian(f, nu), all_variables, all_values));
 
-x_init = [0 0 0 0]';  % New initial values
+x_init = [0 0 theta_m_eq 0]';  
 
-x_ref = [pi/4; 0 ; 0; 0];
+x_ref = [theta_l_eq 0 theta_m_eq 0]';
 
 %%% Regulators %%%
 %%%%%%%%%%%%%%%%%%
@@ -62,11 +64,11 @@ R = 2;  % Define the control-effort weighting
 [K, S, e] = lqr(A_lin, B_lin, Q, R);
 % K is the optimal gain matrix
 
-%% LQR w/ augmented integral state
+%% LQR w/ augmented integral state for Theta_l 
 % Original state-space model
 A = A_lin;  % Your original A matrix
 B = B_lin;  % Your original B matrix
-C = [1 1 1 1];  % Assumes everything is measured
+C = [1 0 1 0];  % Assumes everything is measured
 D = 0;  % Assume no direct feedthrough for simplicity
 
 % Augment the state-space model to include the integral of the error
@@ -74,15 +76,15 @@ A_aug = [A, zeros(4, 1); -C, 0];
 B_aug = [B; 0];
 
 % Choose new Q and R matrices for the augmented system
-Q_aug = diag([500, 0.1, 0.1, 0.1, 10]);  % The last element is for the integrator state
-R_aug = 5;  % Control-effort weighting
+Q_aug = diag([10, 200, 1, 50, 500]);  % The last element is for the integrator state
+R_aug = 100;  % Control-effort weighting
 
 % Compute the LQR gain for the augmented system
 [K_aug, S_aug, e_aug] = lqr(A_aug, B_aug, Q_aug, R_aug);
 
 % Extract the feedback gain and the integrator gain from the augmented gain matrix
 K = K_aug(1:4);  % Feedback gain for the original states
-K_i = 10*abs(K_aug(5));  % Integrator gain
+K_i = 1*abs(K_aug(5));  % Integrator gain
 
 %% Feedforward Gain (NOTE: useless for this system)
 % Compute the pseudo-inverse for feedforward gain
