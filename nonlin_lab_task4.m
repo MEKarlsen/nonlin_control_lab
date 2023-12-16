@@ -1,8 +1,8 @@
 %% Nonlinear Control Lab Task 4 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%clc 
-%clear
+clc 
+clear
 
 %% Init
 
@@ -17,6 +17,8 @@ x2 = theta_l_dot;   % dot(theta_l)
 x3 = theta_m;       % theta_m
 x4 = theta_m_dot;   % dot(theta_m)
 
+x = [x1; x2; x3; x4];
+
 % Define the system equations
 f1 = x2;
 f2 = -(B_l/J_l)*x2 - (k/J_l)*(x1 - x3) - (m*g*l/J_l)*cos(x1);
@@ -25,6 +27,16 @@ f4 = (k/J_m)*(x1 - x3) - (B_m/J_m)*x4 + nu/J_m;
 
 % Define the nonlinear system
 f = [f1; f2; f3; f4];
+
+% Define the system equations
+a1 = x2;
+a2 = -(B_l/J_l)*x2 - (k/J_l)*(x1 - x3) - (m*g*l/J_l)*cos(x1);
+a3 = x4;
+a4 = (k/J_m)*(x1 - x3) - (B_m/J_m)*x4;
+
+% Define the nonlinear system
+a = [a1; a2; a3; a4];
+b = [0; 0; 0; 1/J_m];
 
 % Define the point of linearization
 theta_l_eq = pi/4;
@@ -42,7 +54,7 @@ A_lin = double(subs(jacobian(f, [x1, x2, x3, x4]), all_variables, all_values));
 B_lin = double(subs(jacobian(f, nu), all_variables, all_values));
 
 % Calculate the determinant of A_lin
-det_A_lin = det(A_lin)
+det_A_lin = det(A_lin);
 
 % Check if the matrix is singular
 if det_A_lin == 0
@@ -114,32 +126,17 @@ disp('L_g_L_f_y at equilibrium:');
 disp(L_g_L_f_y_at_eq);
 
 %% Construct the vector fields {b, ad_a^1 b  ...} for the given regular system 
-% Ensure you have the Symbolic Math Toolbox installed and active
-% Define the symbolic variables
-syms g l m J_l J_m B_l B_m k real
-
-% Define the system matrices A and B
-A = [0, 1, 0, 0;
-     sqrt(2)*g*l*m/(2*J_l) - k/J_l, -B_l/J_l, k/J_l, 0;
-     0, 0, 0, 1;
-     k/J_m, 0, -k/J_m, -B_m/J_m];
-
-B = [0; 0; 0; 1/J_m];
-
-% Define the number of iterations, which should be n for an n-dimensional system
-% to include the nth iterated Lie bracket
-n = 4; % Assuming the system is 4-dimensional
+% Assuming the system is 4-dimensional
+n = 4;
 
 % Preallocate cell array to store the vector fields
 vec_fields = cell(1, n);
 
-% Calculate the vector fields ad_a^0 b, ..., ad_a^(n-1) b
-for k = 0:n-1  % Updated range to include k = 3
-    % Compute ad_a^k b using the simplified formula for linear systems
-    ad_a_b = (-1)^k * A^k * B;
-    
-    % Store the result in the cell array
-    vec_fields{k+1} = simplify(ad_a_b);
+% Compute the vector fields ad_a^0 b, ..., ad_a^(n-1) b
+vec_fields{1} = b; % ad_a^0 b is just b
+for k = 1:n-1
+    % Compute ad_a^k b using the recursive definition
+    vec_fields{k+1} = simplify(jacobian(vec_fields{k}, x) * a - jacobian(a, x) * vec_fields{k});
 end
 
 % Display the results
@@ -149,7 +146,7 @@ for i = 1:length(vec_fields)
 end
 
 % Create a matrix with the vector fields as columns
-V = [vec_fields{:}];  % Concatenate the cell array contents into a matrix
+V = [vec_fields{:}];
 
 % Calculate the rank of the matrix V
 rank_V = rank(V);
@@ -163,14 +160,14 @@ end
 
 %% Check whether the controllability and involutivity conditions are satisfied in 𝐷 containing x^0
 
+% Check involutivity
 is_involutory = true;
-for i = 1:length(vec_fields)-1  % Only need to go up to n-2
-    for j = i+1:length(vec_fields)-1  % Only need to go up to n-2
+for i = 1:n-2
+    for j = i+1:n-2
         % Compute the Lie bracket of the i-th and j-th vector fields
         lie_bracket = jacobian(vec_fields{j}, x) * vec_fields{i} - jacobian(vec_fields{i}, x) * vec_fields{j};
         
         % Check if this Lie bracket is in the span of the original set
-        % Simplified check, assumes the rank is full and the set is already a basis
         coeff = V\lie_bracket;
         if norm(V*coeff - lie_bracket) > 1e-6 % A tolerance for numerical error
             is_involutory = false;
@@ -192,47 +189,84 @@ end
 % Define the output function c(x)
 c = pi/4 - theta_l;
 
-% Define the state vector
-x = [theta_l; theta_l_dot; theta_m; theta_m_dot];
-
 % Define the equilibrium point x^0
 x0 = [pi/4; 0; 0; 0];
 
-% Define the vector fields a(x) and b(x)
-A = [0, 1, 0, 0;
-     sqrt(2)*g*l*m/(2*J_l) - k/J_l, -B_l/J_l, k/J_l, 0;
-     0, 0, 0, 1;
-     k/J_m, 0, -k/J_m, -B_m/J_m];
-B = [0; 0; 0; 1/J_m];
+% First Lie derivatives
+Lb_c = lie_derivative(b, c, x);
+La_c = lie_derivative(a, c, x);
 
-% Compute the Lie derivatives L_b L_a^i c for i = 0 to n-2
-n = 4; % Assuming the system is 4-dimensional
-L_b_L_a_c = c; % Initialize the Lie derivative of c with respect to a
+% Higher-order Lie derivatives
+Lb_La_c = lie_derivative(b, La_c, x);
+La_La_c = lie_derivative(a, La_c, x);
+Lb_La_La_c = lie_derivative(b, La_La_c, x);
+La_La_La_c = lie_derivative(a, La_La_c, x);
+Lb_La_La_La_c = lie_derivative(b, La_La_La_c, x);
+La_La_La_La_c = lie_derivative(a, La_La_La_c, x);
 
-for i = 0:n-2
-    L_b_L_a_c = jacobian(L_b_L_a_c, x) * B; % Compute L_b (L_a^i c)
-    % Evaluate the Lie derivative at the equilibrium point x^0
-    L_b_L_a_c_at_x0 = double(subs(L_b_L_a_c, x, x0));
-    if L_b_L_a_c_at_x0 == 0
-        fprintf('L_b L_a^%d c = 0 at x^0\n', i);
+% Display the higher-order Lie derivatives
+disp('Higher-order Lie derivatives:');
+disp(Lb_La_c);
+disp(Lb_La_La_c);
+disp(Lb_La_La_La_c);
+
+% Evaluate at the equilibrium point x0 if necessary
+Lb_c_at_x0 = subs(Lb_c, x, x0);
+La_c_at_x0 = subs(La_c, x, x0);
+Lb_La_c_at_x0 = subs(Lb_La_c, x, x0);
+Lb_La_La_c_at_x0 = subs(Lb_La_La_c, x, x0);
+Lb_La_La_La_c_at_x0 = subs(Lb_La_La_La_c, x, x0);
+
+% Display the evaluated Lie derivatives at the equilibrium point
+disp('Lie derivatives evaluated at the equilibrium point:');
+disp(Lb_c_at_x0);
+disp(La_c_at_x0);
+disp(Lb_La_c_at_x0);
+disp(Lb_La_La_c_at_x0);
+disp(Lb_La_La_La_c_at_x0);
+
+% Define symbolic variables, functions, and control input u
+syms u; % Control input
+
+% Define c, a, b, x, and x0 as before
+
+% Calculate the Lie derivatives for k = 1 to 4
+for k = 1:4
+    L_a_k_c = higher_order_lie_derivative(a, c, x, k);
+    if k > 1
+        L_b_L_a_k_minus_1_c = lie_derivative(b, higher_order_lie_derivative(a, c, x, k-1), x);
     else
-        fprintf('L_b L_a^%d c is not zero at x^0\n', i);
-        break; % If any of the first n-2 Lie derivatives are non-zero, the system is not IO linearizable
+        L_b_L_a_k_minus_1_c = 0; % L_b_L_a^0_c is zero since L_a^0_c = c and L_b_c has already been calculated if needed
     end
+    y_k = L_a_k_c + u * L_b_L_a_k_minus_1_c;
     
-    if i < n-2
-        L_a_c = jacobian(L_b_L_a_c, x) * A; % Compute the next L_a^i c for the next iteration
+    % Evaluate at the equilibrium point x0 if necessary
+    y_k_at_x0 = subs(y_k, x, x0);
+    
+    % Display the k-th derivative
+    fprintf('The %d-th derivative of y is:\n', k);
+    disp(y_k_at_x0);
+end
+
+v = La_La_La_La_c + u * Lb_La_La_La_c;
+
+u = solve(v, u);
+
+% Define a function to calculate the Lie derivative
+function Lf_g = lie_derivative(f, g, x)
+    % Calculates the Lie derivative of g with respect to vector field f
+    Lf_g = 0;
+    for i = 1:length(x)
+        Lf_g = Lf_g + diff(g, x(i))*f(i);
     end
 end
 
-% Compute the (n-1)th Lie derivative L_b L_a^(n-1) c
-L_b_L_a_n_minus_1_c = jacobian(L_a_c, x) * A * B;
-L_b_L_a_n_minus_1_c_at_x0 = double(subs(L_b_L_a_n_minus_1_c, x, x0));
-
-% Check if L_b L_a^(n-1) c is not zero at x^0
-if L_b_L_a_n_minus_1_c_at_x0 ~= 0
-    fprintf('L_b L_a^(n-1) c is not zero at x^0, so the system is input-output linearizable at this point.\n');
-else
-    fprintf('L_b L_a^(n-1) c = 0 at x^0, so the system is not input-output linearizable at this point.\n');
+function Lf_g = higher_order_lie_derivative(f, g, x, order)
+    % Computes the higher-order Lie derivative of g with respect to vector field f
+    Lf_g = g;
+    for k = 1:order
+        Lf_g = lie_derivative(f, Lf_g, x);
+    end
 end
+
 
