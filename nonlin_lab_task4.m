@@ -1,8 +1,8 @@
 %% Nonlinear Control Lab Task 4 %%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-clc 
-clear
+%clc 
+%clear
 
 %% Init
 
@@ -29,7 +29,7 @@ f4 = (k/J_m)*(x1 - x3) - (B_m/J_m)*x4 + nu/J_m;
 f = [f1; f2; f3; f4];
 
 % Define the system equations
-a1 = x2;
+a1 = x2;    
 a2 = -(B_l/J_l)*x2 - (k/J_l)*(x1 - x3) - (m*g*l/J_l)*cos(x1);
 a3 = x4;
 a4 = (k/J_m)*(x1 - x3) - (B_m/J_m)*x4;
@@ -204,11 +204,11 @@ La_La_La_c = lie_derivative(a, La_La_c, x);
 Lb_La_La_La_c = lie_derivative(b, La_La_La_c, x);
 La_La_La_La_c = lie_derivative(a, La_La_La_c, x);
 
-% Display the higher-order Lie derivatives
-disp('Higher-order Lie derivatives:');
-disp(Lb_La_c);
-disp(Lb_La_La_c);
-disp(Lb_La_La_La_c);
+disp('La^k derivatives:');
+disp(La_c);
+disp(La_La_c);
+disp(La_La_La_c);
+disp(La_La_La_La_c);
 
 % Evaluate at the equilibrium point x0 if necessary
 Lb_c_at_x0 = subs(Lb_c, x, x0);
@@ -216,19 +216,21 @@ La_c_at_x0 = subs(La_c, x, x0);
 Lb_La_c_at_x0 = subs(Lb_La_c, x, x0);
 Lb_La_La_c_at_x0 = subs(Lb_La_La_c, x, x0);
 Lb_La_La_La_c_at_x0 = subs(Lb_La_La_La_c, x, x0);
+La_La_La_La_c_at_x0 = subs(La_La_La_La_c, x, x0);
+
+% Substitute the numerical values into the expression
+La_La_La_La_c_at_x0_numeric = double(subs(La_La_La_La_c_at_x0, param_values, param_numeric));
+Lb_La_La_La_c_at_x0_numeric = double(subs(Lb_La_La_La_c_at_x0, param_values, param_numeric));
 
 % Display the evaluated Lie derivatives at the equilibrium point
-disp('Lie derivatives evaluated at the equilibrium point:');
-disp(Lb_c_at_x0);
-disp(La_c_at_x0);
-disp(Lb_La_c_at_x0);
-disp(Lb_La_La_c_at_x0);
-disp(Lb_La_La_La_c_at_x0);
+%disp('Lie derivatives evaluated at the equilibrium point:');
+%disp(Lb_c_at_x0);
+%disp(La_c_at_x0);
+%disp(Lb_La_c_at_x0);
+%disp(Lb_La_La_c_at_x0);
+%disp(Lb_La_La_La_c_at_x0);
 
-% Define symbolic variables, functions, and control input u
 syms u; % Control input
-
-% Define c, a, b, x, and x0 as before
 
 % Calculate the Lie derivatives for k = 1 to 4
 for k = 1:4
@@ -241,16 +243,95 @@ for k = 1:4
     y_k = L_a_k_c + u * L_b_L_a_k_minus_1_c;
     
     % Evaluate at the equilibrium point x0 if necessary
-    y_k_at_x0 = subs(y_k, x, x0);
+    %y_k_at_x0 = subs(y_k, x, x0);
     
     % Display the k-th derivative
     fprintf('The %d-th derivative of y is:\n', k);
-    disp(y_k_at_x0);
+    disp(y_k);
 end
 
 v = La_La_La_La_c + u * Lb_La_La_La_c;
-
 u = solve(v, u);
+
+% The new coordinates
+x_tilde_1 = c;
+x_tilde_2 = La_c;
+x_tilde_3 = La_La_c;
+x_tilde_4 = La_La_La_c;
+
+% Define the new state vector in terms of the new coordinates
+x_tilde = [x_tilde_1; x_tilde_2; x_tilde_3; x_tilde_4];
+
+% Calculate the Jacobian of the new state vector with respect to the original state vector
+J_x_tilde = jacobian(x_tilde, x);
+
+% Display the Jacobian matrix
+disp('Jacobian of x_tilde with respect to x:');
+disp(J_x_tilde);
+
+% Substitute the numeric values at the equilibrium point if necessary
+J_x_tilde_at_eq = double(subs(J_x_tilde, all_variables, all_values));
+
+% Display the Jacobian evaluated at the equilibrium point
+disp('Jacobian of x_tilde at the equilibrium point:');
+disp(J_x_tilde_at_eq);  
+
+% Substitute the numeric values at the equilibrium point if necessary
+x_tilde_1_at_eq = double(subs(x_tilde_1, all_variables, all_values));
+x_tilde_2_at_eq = double(subs(x_tilde_2, all_variables, all_values));
+x_tilde_3_at_eq = double(subs(x_tilde_3, all_variables, all_values));
+x_tilde_4_at_eq = double(subs(x_tilde_4, all_variables, all_values));
+
+% You can also perform the check at the equilibrium point
+rank_J_x_tilde_at_eq = rank(J_x_tilde_at_eq);
+
+% Check if the Jacobian at the equilibrium point is full rank
+if rank_J_x_tilde_at_eq == length(x)
+    disp('The Jacobian matrix at the equilibrium point is full rank.');
+else
+    disp('The Jacobian matrix at the equilibrium point is NOT full rank.');
+end
+
+% Display the new coordinates evaluated at the equilibrium point
+disp('The new coordinates at the equilibrium point are:');
+disp(x_tilde_1_at_eq);
+disp(x_tilde_2_at_eq);
+disp(x_tilde_3_at_eq);
+disp(x_tilde_4_at_eq);
+
+% Calculate the time derivatives of the new state variables (x_tilde)
+x_tilde_dot_1 = x_tilde_2;
+x_tilde_dot_2 = x_tilde_3;
+x_tilde_dot_3 = x_tilde_4;
+syms u_old;
+%x_tilde_dot_4 = La_La_La_La_c_at_x0 + u_old*Lb_La_La_La_c_at_x0; % use
+%equations linearized around qeuilibrium when creating simulink!
+x_tilde_dot_4 = La_La_La_La_c + u_old*Lb_La_La_La_c;
+
+x_tilde_dot = [x_tilde_dot_1; x_tilde_dot_2; x_tilde_dot_3; x_tilde_dot_4];
+disp('x_tilde_dot: ');
+disp(x_tilde_dot);
+
+%% LQR regulator
+
+% Define the state-space matrices in the new coordinates
+A_tilde = [0 1 0 0; 0 0 1 0; 0 0 0 1; 0 0 0 0];
+B_tilde = [0; 0; 0; 1];
+C_tilde = [1 0 0 0];
+D_tilde = 0;
+
+% Choose the weighting matrices Q and R
+Q = diag([1, 1, 1, 1]);  % Example: unit weights on all states
+R = 10000000;  % Example: unit weight on input effort
+
+% Solve the LQR problem
+[K_lin_feedback, S, e] = lqr(A_tilde, B_tilde, Q, R);
+
+% Display the optimal gain matrix
+disp('The LQR gain matrix K is:');
+disp(K_lin_feedback);
+
+%% Functions
 
 % Define a function to calculate the Lie derivative
 function Lf_g = lie_derivative(f, g, x)
@@ -268,5 +349,3 @@ function Lf_g = higher_order_lie_derivative(f, g, x, order)
         Lf_g = lie_derivative(f, Lf_g, x);
     end
 end
-
-
