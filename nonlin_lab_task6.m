@@ -312,24 +312,19 @@ x_tilde_dot = [x_tilde_dot_1; x_tilde_dot_2; x_tilde_dot_3; x_tilde_dot_4];
 disp('x_tilde_dot: ');
 disp(x_tilde_dot);
 
-%% LQR regulator
+%% VSC Regulator
 
-% Define the state-space matrices in the new coordinates
-A_tilde = [0 1 0 0; 0 0 1 0; 0 0 0 1; 0 0 0 0];
-B_tilde = [0; 0; 0; 1];
-C_tilde = [1 0 0 0];
-D_tilde = 0;
+% Chosen calues for alhpa_i
+alpha_1 = 10;
+alpha_2 = 10;
+alpha_3 = 10;
 
-% Choose the weighting matrices Q and R
-Q = diag([1, 1, 1, 1]);  % Example: unit weights on all states
-R = 1;  % Example: unit weight on input effort
+s = - x_tilde_4 - alpha_1*x_tilde_3 - alpha_2*x_tilde_2 - alpha_3*x_tilde_1; 
 
-% Solve the LQR problem
-[K_lin_feedback, S, e] = lqr(A_tilde, B_tilde, Q, R);
+% Checking |s(x(0))|/q <= X and finding min value min value q when X = 10
+min_q = 10/abs(- 0 - alpha_1*0 - alpha_2*0 - alpha_3*pi/4);
 
-% Display the optimal gain matrix
-disp('The LQR gain matrix K is:');
-disp(K_lin_feedback);
+v = min_q*sign(- x_tilde_4 - alpha_1*x_tilde_3 - alpha_2*x_tilde_2 - alpha_3*x_tilde_1) - alpha_1*x_tilde_4 - alpha_2*x_tilde_3 - alpha_3*x_tilde_2;
 
 %% Functions
 
