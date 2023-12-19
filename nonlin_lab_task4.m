@@ -204,6 +204,9 @@ La_La_La_c = lie_derivative(a, La_La_c, x);
 Lb_La_La_La_c = lie_derivative(b, La_La_La_c, x);
 La_La_La_La_c = lie_derivative(a, La_La_La_c, x);
 
+% Relative degree
+r = 4; % Lb_La^(r-1)_c = Lb_La^(4-1)_c = -k/(J_l*J_m) =/= 0, 
+
 disp('La^k derivatives:');
 disp(La_c);
 disp(La_La_c);
