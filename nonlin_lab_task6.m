@@ -318,9 +318,9 @@ disp(x_tilde_dot);
 %% VSC Regulator
 
 % Chosen calues for alhpa_i
-alpha_1 = 10;
-alpha_2 = 10;
-alpha_3 = 10;
+alpha_1 = 10000000;
+alpha_2 = 10000000;
+alpha_3 = 10000000;
 
 s = - x_tilde_4 - alpha_1*x_tilde_3 - alpha_2*x_tilde_2 - alpha_3*x_tilde_1; 
 
