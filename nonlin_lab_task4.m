@@ -324,8 +324,8 @@ C_tilde = [1 0 0 0];
 D_tilde = 0;
 
 % Choose the weighting matrices Q and R
-Q = diag([1, 1, 1, 1]);  % Example: unit weights on all states
-R = 1;  % Example: unit weight on input effort
+Q = diag([100000, 100000000, 100000, 10000000]);  % Example: unit weights on all states
+R = 1000;  % Example: unit weight on input effort
 
 % Solve the LQR problem
 [K_lin_feedback, S, e] = lqr(A_tilde, B_tilde, Q, R);
